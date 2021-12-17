@@ -1,0 +1,111 @@
+components:
+  requestBodies:
+    Release:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Release'
+      description: A JSON for release event
+      required: true
+  schemas:
+    DefaultResponse:
+      description: default response
+      properties:
+        message:
+          type: string
+      required:
+        - message
+      type: object
+    CustomError:
+      properties:
+        code:
+          format: int32
+          type: integer
+        message:
+          type: string
+      required:
+        - code
+        - message
+      type: object
+    Release:
+      description: github release event
+      properties:
+        action:
+          enum:
+            - published
+            - released
+            - created
+          type: string
+        release:
+          properties:
+            name:
+              maxLength: 100
+              pattern: ^[a-zA-Z0-9- .]*$
+              type: string
+              example: my first release
+            tag_name:
+              maxLength: 100
+              pattern: ^[a-zA-Z0-9- .]*$
+              type: string
+              example: tag1
+          required:
+            - name
+            - tag_name
+          type: object
+        repository:
+          properties:
+            html_url:
+              maxLength: 200
+              pattern: ^https://[a-z0-9/.-]+$
+              type: string
+              example: https://github.com/opensvc/collector
+          required:
+            - html_url
+          type: object
+      required:
+        - action
+        - release
+        - repository
+      type: object
+info:
+  title: github webhook receiver
+  version: 0.2.0
+openapi: 3.0.0
+paths:
+  /release:
+    post:
+      operationId: ReleasePost
+      parameters:
+        - in: header
+          name: X-GitHub-Event
+          required: true
+          schema:
+            enum:
+              - release
+            type: string
+        - in: header
+          name: X-Hub-Signature
+          required: true
+          schema:
+            pattern: ^sha1=[a-z0-9]+$
+            type: string
+      requestBody:
+        $ref: '#/components/requestBodies/Release'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultResponse'
+          description: 200 response
+        default:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomError'
+          description: unexpected error
+      summary: Receive release request webhook from github
+servers:
+  - url: 'http://localhost:8080'
+
+
