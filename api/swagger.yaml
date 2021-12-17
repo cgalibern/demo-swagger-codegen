@@ -1,0 +1,119 @@
+openapi: 3.0.0
+info:
+  title: github webhook receiver
+  version: 0.2.0
+servers:
+- url: http://localhost:8080
+paths:
+  /release:
+    post:
+      summary: Receive release request webhook from github
+      operationId: ReleasePost
+      parameters:
+      - name: X-GitHub-Event
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          enum:
+          - release
+      - name: X-Hub-Signature
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          pattern: "^sha1=[a-z0-9]+$"
+          type: string
+      requestBody:
+        $ref: '#/components/requestBodies/Release'
+      responses:
+        "200":
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultResponse'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomError'
+components:
+  schemas:
+    DefaultResponse:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
+      description: default response
+      example:
+        message: message
+    CustomError:
+      required:
+      - code
+      - message
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    Release:
+      required:
+      - action
+      - release
+      - repository
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+          - published
+          - released
+          - created
+        release:
+          $ref: '#/components/schemas/Release_release'
+        repository:
+          $ref: '#/components/schemas/Release_repository'
+      description: github release event
+    Release_release:
+      required:
+      - name
+      - tag_name
+      type: object
+      properties:
+        name:
+          maxLength: 100
+          pattern: "^[a-zA-Z0-9- .]*$"
+          type: string
+          example: my first release
+        tag_name:
+          maxLength: 100
+          pattern: "^[a-zA-Z0-9- .]*$"
+          type: string
+          example: tag1
+    Release_repository:
+      required:
+      - html_url
+      type: object
+      properties:
+        html_url:
+          maxLength: 200
+          pattern: "^https://[a-z0-9/.-]+$"
+          type: string
+          example: https://github.com/opensvc/collector
+  requestBodies:
+    Release:
+      description: A JSON for release event
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Release'
+      required: true
